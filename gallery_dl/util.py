@@ -101,7 +101,7 @@ def raises(cls):
     return wrap
 
 
-def identity(x):
+def identity(x, _=None):
     """Returns its argument"""
     return x
 
@@ -520,14 +520,9 @@ class CustomNone():
     """None-style type that supports more operations than regular None"""
     __slots__ = ()
 
-    def __getattribute__(self, _):
-        return self
-
-    def __getitem__(self, _):
-        return self
-
-    def __iter__(self):
-        return self
+    __getattribute__ = identity
+    __getitem__ = identity
+    __iter__ = identity
 
     def __call__(self, *args, **kwargs):
         return self
@@ -535,10 +530,6 @@ class CustomNone():
     @staticmethod
     def __next__():
         raise StopIteration
-
-    @staticmethod
-    def __bool__():
-        return False
 
     def __eq__(self, other):
         return self is other
@@ -550,14 +541,48 @@ class CustomNone():
     __le__ = true
     __gt__ = false
     __ge__ = false
+    __bool__ = false
+
+    __add__ = identity
+    __sub__ = identity
+    __mul__ = identity
+    __matmul__ = identity
+    __truediv__ = identity
+    __floordiv__ = identity
+    __mod__ = identity
+
+    __radd__ = identity
+    __rsub__ = identity
+    __rmul__ = identity
+    __rmatmul__ = identity
+    __rtruediv__ = identity
+    __rfloordiv__ = identity
+    __rmod__ = identity
+
+    __lshift__ = identity
+    __rshift__ = identity
+    __and__ = identity
+    __xor__ = identity
+    __or__ = identity
+
+    __rlshift__ = identity
+    __rrshift__ = identity
+    __rand__ = identity
+    __rxor__ = identity
+    __ror__ = identity
+
+    __neg__ = identity
+    __pos__ = identity
+    __abs__ = identity
+    __invert__ = identity
 
     @staticmethod
     def __len__():
         return 0
 
-    @staticmethod
-    def __hash__():
-        return 0
+    __int__ = __len__
+    __hash__ = __len__
+    __index__ = __len__
 
     @staticmethod
     def __format__(_):

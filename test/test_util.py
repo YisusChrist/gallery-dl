@@ -12,9 +12,11 @@ import sys
 import unittest
 
 import io
+import time
 import random
 import string
 import datetime
+import platform
 import tempfile
 import itertools
 import http.cookiejar
@@ -741,6 +743,9 @@ def hash(value):
 
         self.assertFalse(obj)
         self.assertEqual(len(obj), 0)
+        self.assertEqual(int(obj), 0)
+        self.assertEqual(hash(obj), 0)
+
         self.assertEqual(str(obj), str(None))
         self.assertEqual(repr(obj), repr(None))
         self.assertEqual(format(obj), str(None))
@@ -751,6 +756,7 @@ def hash(value):
         self.assertIs(obj(), obj)
         self.assertIs(obj(1, "a"), obj)
         self.assertIs(obj(foo="bar"), obj)
+        self.assertIs(iter(obj), obj)
         self.assertEqual(util.json_dumps(obj), "null")
 
         self.assertLess(obj, "foo")
@@ -761,9 +767,49 @@ def hash(value):
         self.assertGreater(123, obj)
         self.assertGreaterEqual(1.23, obj)
 
+        self.assertEqual(obj + 123, obj)
+        self.assertEqual(obj - 123, obj)
+        self.assertEqual(obj * 123, obj)
+        #  self.assertEqual(obj @ 123, obj)
+        self.assertEqual(obj / 123, obj)
+        self.assertEqual(obj // 123, obj)
+        self.assertEqual(obj % 123, obj)
+
+        self.assertEqual(123 + obj, obj)
+        self.assertEqual(123 - obj, obj)
+        self.assertEqual(123 * obj, obj)
+        #  self.assertEqual(123 @ obj, obj)
+        self.assertEqual(123 / obj, obj)
+        self.assertEqual(123 // obj, obj)
+        self.assertEqual(123 % obj, obj)
+
+        self.assertEqual(obj << 123, obj)
+        self.assertEqual(obj >> 123, obj)
+        self.assertEqual(obj & 123, obj)
+        self.assertEqual(obj ^ 123, obj)
+        self.assertEqual(obj | 123, obj)
+
+        self.assertEqual(123 << obj, obj)
+        self.assertEqual(123 >> obj, obj)
+        self.assertEqual(123 & obj, obj)
+        self.assertEqual(123 ^ obj, obj)
+        self.assertEqual(123 | obj, obj)
+
+        self.assertEqual(-obj, obj)
+        self.assertEqual(+obj, obj)
+        self.assertEqual(~obj, obj)
+        self.assertEqual(abs(obj), obj)
+
         mapping = {}
         mapping[obj] = 123
         self.assertIn(obj, mapping)
+        self.assertEqual(mapping[obj], 123)
+
+        array = [1, 2, 3]
+        self.assertEqual(array[obj], 1)
+
+        if platform.python_implementation().lower() == "cpython":
+            self.assertTrue(time.localtime(obj))
 
         i = 0
         for _ in obj:
