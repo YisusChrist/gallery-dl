@@ -690,6 +690,17 @@ __tests__ = (
 },
 
 {
+    "#url"    : "https://www.deviantart.com/justatest235723/art/archive-1103129101",
+    "#comment": "ZIP archive + preview image (#3782)",
+    "#class"  : deviantart.DeviantartDeviationExtractor,
+    "#options": {"previews": True},
+    "#pattern": [
+        r"/f/940f2d05-c5eb-4917-8192-7eb6a2d508c6/di8rvv1-afe65948-16e1-4eca-b08d-9e6aaa9ed344\.zip",
+        r"/i/940f2d05-c5eb-4917-8192-7eb6a2d508c6/di8rvv1-bb9d891f-4374-4203-acd3-aea34b29a6a1\.png",
+    ],
+},
+
+{
     "#url"     : "https://www.deviantart.com/myria-moon/art/Aime-Moi-261986576",
     "#category": ("", "deviantart", "deviation"),
     "#class"   : deviantart.DeviantartDeviationExtractor,
@@ -757,6 +768,16 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://www.deviantart.com/justatest235723/art/video-1103119114",
+    "#comment" : "video",
+    "#class"   : deviantart.DeviantartDeviationExtractor,
+    "#pattern" : r"/f/940f2d05-c5eb-4917-8192-7eb6a2d508c6/di8ro5m-e2a5bdf0-daee-4e18-bede-fbfc394d6c65\.mp4\?token=ey",
+
+    "filename" : "video_63aebdd4bc0323da460796b9a2ac8522_by_justatest235723-di8ro5m",
+    "extension": "mp4",
+},
+
+{
     "#url"     : "https://www.deviantart.com/uotapo/art/INANAKI-Memo-590297498",
     "#comment" : "sta.sh URLs from description (#302)",
     "#category": ("", "deviantart", "deviation"),
@@ -798,6 +819,21 @@ __tests__ = (
     "#pattern" : """text:<!DOCTYPE html>\n""",
     "#sha1_url": "8ca1dc8df53d3707c778d08a604f9ad9ddba7469",
 },
+
+{
+    "#url"     : "https://www.deviantart.com/stash/09z3557z648",
+    "#comment" : "sta.sh journal (#6207)",
+    "#class"   : deviantart.DeviantartStashExtractor,
+    "#pattern" : """text:<!DOCTYPE html>\n""",
+},
+
+{
+    "#url"     : "https://www.deviantart.com/starvinglunatic/art/Against-the-world-chapter-1-50968347",
+    "#comment" : "literature (#6254)",
+    "#class"   : deviantart.DeviantartDeviationExtractor,
+    "#pattern" : """text:<!DOCTYPE html>\n""",
+},
+
 
 {
     "#url"     : "https://www.deviantart.com/neotypical/art/985226590",

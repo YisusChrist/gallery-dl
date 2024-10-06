@@ -40,8 +40,9 @@ class FlickrExtractor(Extractor):
                 photo = extract(photo)
             except Exception as exc:
                 self.log.warning(
-                    "Skipping %s (%s)", photo["id"], exc.__class__.__name__)
-                self.log.debug("", exc_info=True)
+                    "Skipping photo %s (%s: %s)",
+                    photo["id"], exc.__class__.__name__, exc)
+                self.log.debug("", exc_info=exc)
             else:
                 photo.update(data)
                 url = photo["url"]
@@ -132,8 +133,13 @@ class FlickrAlbumExtractor(FlickrExtractor):
 
     def metadata(self):
         data = FlickrExtractor.metadata(self)
-        data["album"] = self.api.photosets_getInfo(
-            self.album_id, self.user["nsid"])
+        try:
+            data["album"] = self.api.photosets_getInfo(
+                self.album_id, self.user["nsid"])
+        except Exception:
+            data["album"] = {}
+            self.log.warning("%s: Unable to retrieve album metadata",
+                             self.album_id)
         return data
 
     def photos(self):
@@ -519,7 +525,7 @@ class FlickrAPI(oauth.OAuth1API):
 
         if self.contexts:
             try:
-                photo.update(self.api.photos_getAllContexts(photo["id"]))
+                photo.update(self.photos_getAllContexts(photo["id"]))
             except Exception as exc:
                 self.log.warning(
                     "Unable to retrieve 'contexts' data for %s (%s: %s)",
