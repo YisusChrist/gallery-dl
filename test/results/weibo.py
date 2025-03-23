@@ -227,13 +227,14 @@ __tests__ = (
 },
 
 {
-    "#url"     : "https://weibo.com/5643044717/KkuDZ4jAA",
-    "#comment" : "type == livephoto (#2146)",
+    "#url"     : "https://weibo.com/3194672795/OuxSwgUrC",
+    "#comment" : "type == livephoto (#2146, #6471)",
     "#category": ("", "weibo", "status"),
     "#class"   : weibo.WeiboStatusExtractor,
-    "#pattern" : r"https://video\.weibo\.com/media/play\?livephoto=https%3A%2F%2Fus\.sinaimg\.cn%2F\w+\.mov",
-    "#range"   : "2,4,6",
+    "#pattern" : r"https://livephoto\.us\.sinaimg\.cn/\w+\.mov\?Expires=\d+&ssig=[^&#]+&KID=unistore,video",
+    "#range"   : "2,4",
 
+    "filename" : {"000yfKhRjx08hBAXxdZ60f0f0100tBPr0k01", "000GEYrCjx08hBAXUFo40f0f0100vS5G0k01"},
     "extension": "mov",
 },
 
@@ -279,6 +280,20 @@ __tests__ = (
     "#category": ("", "weibo", "status"),
     "#class"   : weibo.WeiboStatusExtractor,
     "#count"   : 9,
+},
+
+{
+    "#url"     : "https://weibo.com/1919017185/4246199458129705",
+    "#comment" : "'movie'-type video (#3793)",
+    "#category": ("", "weibo", "status"),
+    "#class"   : weibo.WeiboStatusExtractor,
+    "#options" : {"movies": True},
+    "#urls"    : (
+        "https://wx4.sinaimg.cn/large/7261e0e1gy1frvyc1xnkfj20qo0zkwjh.jpg",
+        "https://wx2.sinaimg.cn/large/7261e0e1gy1frvyc30b1jj20zk0qojwh.jpg",
+        "https://wx4.sinaimg.cn/large/7261e0e1gy1frvyc44lx8j20qo0zk7a6.jpg",
+        "https://gslb.miaopai.com/stream/KdhuavhOnJ7R6zJFXfEXm-sDthpmC5DIGqrdOg__.mp4?yx=&refer=weibo_app&tags=weibocard",
+    ),
 },
 
 {

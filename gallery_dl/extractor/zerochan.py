@@ -64,43 +64,47 @@ class ZerochanExtractor(BooruExtractor):
 
     def _parse_entry_html(self, entry_id):
         url = "{}/{}".format(self.root, entry_id)
-        extr = text.extract_from(self.request(url).text)
+        page = self.request(url).text
 
+        try:
+            jsonld = self._extract_jsonld(page)
+        except Exception:
+            return {"id": entry_id}
+
+        extr = text.extract_from(page)
         data = {
             "id"      : text.parse_int(entry_id),
-            "author"  : text.parse_unicode_escapes(extr('    "name": "', '"')),
-            "file_url": extr('"contentUrl": "', '"'),
-            "date"    : text.parse_datetime(extr('"datePublished": "', '"')),
-            "width"   : text.parse_int(extr('"width": "', ' ')),
-            "height"  : text.parse_int(extr('"height": "', ' ')),
-            "size"    : text.parse_bytes(extr('"contentSize": "', 'B')),
+            "author"  : jsonld["author"]["name"],
+            "file_url": jsonld["contentUrl"],
+            "date"    : text.parse_datetime(jsonld["datePublished"]),
+            "width"   : text.parse_int(jsonld["width"][:-3]),
+            "height"  : text.parse_int(jsonld["height"][:-3]),
+            "size"    : text.parse_bytes(jsonld["contentSize"][:-1]),
             "path"    : text.split_html(extr(
                 'class="breadcrumbs', '</nav>'))[2:],
             "uploader": extr('href="/user/', '"'),
             "tags"    : extr('<ul id="tags"', '</ul>'),
-            "source"  : text.unescape(text.extr(
-                extr('id="source-url"', '</a>'), 'href="', '"')),
+            "source"  : text.unescape(text.remove_html(extr(
+                'id="source-url"', '</p>').rpartition("</s>")[2])),
         }
 
         html = data["tags"]
         tags = data["tags"] = []
         for tag in html.split("<li class=")[1:]:
             category = text.extr(tag, '"', '"')
-            name = text.extr(tag, 'data-tag="', '"')
+            name = text.unescape(text.extr(tag, 'data-tag="', '"'))
             tags.append(category.partition(" ")[0].capitalize() + ":" + name)
 
         return data
 
     def _parse_entry_api(self, entry_id):
         url = "{}/{}?json".format(self.root, entry_id)
-        text = self.request(url).text
+        txt = self.request(url).text
         try:
-            item = util.json_loads(text)
-        except ValueError as exc:
-            if " control character " not in str(exc):
-                raise
-            text = re.sub(r"[\x00-\x1f\x7f]", "", text)
-            item = util.json_loads(text)
+            item = util.json_loads(txt)
+        except ValueError:
+            item = self._parse_json(txt)
+            item["id"] = text.parse_int(entry_id)
 
         data = {
             "id"      : item["id"],
@@ -117,6 +121,27 @@ class ZerochanExtractor(BooruExtractor):
             data["tags"] = item["tags"]
 
         return data
+
+    def _parse_json(self, txt):
+        txt = re.sub(r"[\x00-\x1f\x7f]", "", txt)
+        main, _, tags = txt.partition('tags": [')
+
+        item = {}
+        for line in main.split(',  "')[1:]:
+            key, _, value = line.partition('": ')
+            if value:
+                if value[0] == '"':
+                    value = value[1:-1]
+                else:
+                    value = text.parse_int(value)
+            if key:
+                item[key] = value
+
+        item["tags"] = tags = tags[5:].split('",    "')
+        if tags:
+            tags[-1] = tags[-1][:-5]
+
+        return item
 
     def _tags(self, post, page):
         tags = collections.defaultdict(list)
@@ -144,6 +169,14 @@ class ZerochanTagExtractor(ZerochanExtractor):
         else:
             self.posts = self.posts_api
             self.session.headers["User-Agent"] = util.USERAGENT
+
+        exts = self.config("extensions")
+        if exts:
+            if isinstance(exts, str):
+                exts = exts.split(",")
+            self.exts = exts
+        else:
+            self.exts = ("jpg", "png", "webp", "gif")
 
     def metadata(self):
         return {"search_tags": text.unquote(
@@ -194,8 +227,6 @@ class ZerochanTagExtractor(ZerochanExtractor):
             "p"   : self.page_start,
         }
 
-        static = "https://static.zerochan.net/.full."
-
         while True:
             response = self.request(url, params=params, allow_redirects=False)
 
@@ -221,14 +252,19 @@ class ZerochanTagExtractor(ZerochanExtractor):
                     yield post
             else:
                 for post in posts:
-                    base = static + str(post["id"])
-                    post["file_url"] = base + ".jpg"
-                    post["_fallback"] = (base + ".png",)
+                    urls = self._urls(post)
+                    post["file_url"] = next(urls)
+                    post["_fallback"] = urls
                     yield post
 
             if not data.get("next"):
                 return
             params["p"] += 1
+
+    def _urls(self, post, static="https://static.zerochan.net/.full."):
+        base = static + str(post["id"]) + "."
+        for ext in self.exts:
+            yield base + ext
 
 
 class ZerochanImageExtractor(ZerochanExtractor):

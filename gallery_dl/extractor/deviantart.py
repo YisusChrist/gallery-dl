@@ -31,7 +31,7 @@ class DeviantartExtractor(Extractor):
     root = "https://www.deviantart.com"
     directory_fmt = ("{category}", "{username}")
     filename_fmt = "{category}_{index}_{title}.{extension}"
-    cookies_domain = None
+    cookies_domain = ".deviantart.com"
     cookies_names = ("auth", "auth_secure", "userinfo")
     _last_request = 0
 
@@ -373,32 +373,284 @@ class DeviantartExtractor(Extractor):
             html = text.extr(
                 page,
                 "<h2>Literature Text</h2></span><div>",
-                "</div></section>")
+                "</div></section></div></div>")
             if html:
                 return {"html": html}
 
-            self.log.warning("%s: Failed to extract journal HTML from "
-                             "webpage. Falling back to __INITIAL_STATE__ "
-                             "markup.", deviation["index"])
+            self.log.debug("%s: Failed to extract journal HTML from webpage. "
+                           "Falling back to __INITIAL_STATE__ markup.",
+                           deviation["index"])
 
             # parse __INITIAL_STATE__ as fallback
             state = util.json_loads(text.extr(
                 page, 'window.__INITIAL_STATE__ = JSON.parse("', '");')
                 .replace("\\\\", "\\").replace("\\'", "'").replace('\\"', '"'))
-
             deviations = state["@@entities"]["deviation"]
             content = deviations.popitem()[1]["textContent"]
 
-            html = content["html"]["markup"]
-            if html.startswith("{"):
-                self.log.warning("%s: Unsupported '%s' markup.",
-                                 deviation["index"], content["html"]["type"])
-                html = content["excerpt"].replace("\n", "<br />")
-            return {"html": html}
+            html = self._textcontent_to_html(deviation, content)
+            if html:
+                return {"html": html}
+            return {"html": content["excerpt"].replace("\n", "<br />")}
 
         if "body" in deviation:
             return {"html": deviation.pop("body")}
         return None
+
+    def _textcontent_to_html(self, deviation, content):
+        html = content["html"]
+        markup = html.get("markup")
+
+        if not markup or markup[0] != "{":
+            return markup
+
+        if html["type"] == "tiptap":
+            try:
+                return self._tiptap_to_html(markup)
+            except Exception as exc:
+                self.log.debug("", exc_info=exc)
+                self.log.error("%s: '%s: %s'", deviation["index"],
+                               exc.__class__.__name__, exc)
+
+        self.log.warning("%s: Unsupported '%s' markup.",
+                         deviation["index"], html["type"])
+
+    def _tiptap_to_html(self, markup):
+        html = []
+
+        html.append('<div data-editor-viewer="1" '
+                    'class="_83r8m _2CKTq _3NjDa mDnFl">')
+        data = util.json_loads(markup)
+        for block in data["document"]["content"]:
+            self._tiptap_process_content(html, block)
+        html.append("</div>")
+
+        return "".join(html)
+
+    def _tiptap_process_content(self, html, content):
+        type = content["type"]
+
+        if type == "paragraph":
+            children = content.get("content")
+            if children:
+                html.append('<p style="')
+
+                attrs = content["attrs"]
+                if "textAlign" in attrs:
+                    html.append("text-align:")
+                    html.append(attrs["textAlign"])
+                    html.append(";")
+                self._tiptap_process_indentation(html, attrs)
+                html.append('">')
+
+                for block in children:
+                    self._tiptap_process_content(html, block)
+                html.append("</p>")
+            else:
+                html.append('<p class="empty-p"><br/></p>')
+
+        elif type == "text":
+            self._tiptap_process_text(html, content)
+
+        elif type == "heading":
+            attrs = content["attrs"]
+            level = str(attrs.get("level") or "3")
+
+            html.append("<h")
+            html.append(level)
+            html.append(' style="text-align:')
+            html.append(attrs.get("textAlign") or "left")
+            html.append('">')
+            html.append('<span style="')
+            self._tiptap_process_indentation(html, attrs)
+            html.append('">')
+            self._tiptap_process_children(html, content)
+            html.append("</span></h")
+            html.append(level)
+            html.append(">")
+
+        elif type in ("listItem", "bulletList", "orderedList", "blockquote"):
+            c = type[1]
+            tag = (
+                "li" if c == "i" else
+                "ul" if c == "u" else
+                "ol" if c == "r" else
+                "blockquote"
+            )
+            html.append("<" + tag + ">")
+            self._tiptap_process_children(html, content)
+            html.append("</" + tag + ">")
+
+        elif type == "anchor":
+            attrs = content["attrs"]
+            html.append('<a id="')
+            html.append(attrs.get("id") or "")
+            html.append('" data-testid="anchor"></a>')
+
+        elif type == "hardBreak":
+            html.append("<br/><br/>")
+
+        elif type == "horizontalRule":
+            html.append("<hr/>")
+
+        elif type == "da-deviation":
+            self._tiptap_process_deviation(html, content)
+
+        elif type == "da-mention":
+            user = content["attrs"]["user"]["username"]
+            html.append('<a href="https://www.deviantart.com/')
+            html.append(user.lower())
+            html.append('" data-da-type="da-mention" data-user="">@<!-- -->')
+            html.append(user)
+            html.append('</a>')
+
+        elif type == "da-gif":
+            attrs = content["attrs"]
+            width = str(attrs.get("width") or "")
+            height = str(attrs.get("height") or "")
+            url = text.escape(attrs.get("url") or "")
+
+            html.append('<div data-da-type="da-gif" data-width="')
+            html.append(width)
+            html.append('" data-height="')
+            html.append(height)
+            html.append('" data-alignment="')
+            html.append(attrs.get("alignment") or "")
+            html.append('" data-url="')
+            html.append(url)
+            html.append('" class="t61qu"><video role="img" autoPlay="" '
+                        'muted="" loop="" style="pointer-events:none" '
+                        'controlsList="nofullscreen" playsInline="" '
+                        'aria-label="gif" data-da-type="da-gif" width="')
+            html.append(width)
+            html.append('" height="')
+            html.append(height)
+            html.append('" src="')
+            html.append(url)
+            html.append('" class="_1Fkk6"></video></div>')
+
+        elif type == "da-video":
+            src = text.escape(content["attrs"].get("src") or "")
+            html.append('<div data-testid="video" data-da-type="da-video" '
+                        'data-src="')
+            html.append(src)
+            html.append('" class="_1Uxvs"><div data-canfs="yes" data-testid="v'
+                        'ideo-inner" class="main-video" style="width:780px;hei'
+                        'ght:438px"><div style="width:780px;height:438px">'
+                        '<video src="')
+            html.append(src)
+            html.append('" style="width:100%;height:100%;" preload="auto" cont'
+                        'rols=""></video></div></div></div>')
+
+        else:
+            self.log.warning("Unsupported content type '%s'", type)
+
+    def _tiptap_process_text(self, html, content):
+        marks = content.get("marks")
+        if marks:
+            close = []
+            for mark in marks:
+                type = mark["type"]
+                if type == "link":
+                    attrs = mark.get("attrs") or {}
+                    html.append('<a href="')
+                    html.append(text.escape(attrs.get("href") or ""))
+                    if "target" in attrs:
+                        html.append('" target="')
+                        html.append(attrs["target"])
+                    html.append('" rel="')
+                    html.append(attrs.get("rel") or
+                                "noopener noreferrer nofollow ugc")
+                    html.append('">')
+                    close.append("</a>")
+                elif type == "bold":
+                    html.append("<strong>")
+                    close.append("</strong>")
+                elif type == "italic":
+                    html.append("<em>")
+                    close.append("</em>")
+                elif type == "underline":
+                    html.append("<u>")
+                    close.append("</u>")
+                elif type == "strike":
+                    html.append("<s>")
+                    close.append("</s>")
+                elif type == "textStyle" and len(mark) <= 1:
+                    pass
+                else:
+                    self.log.warning("Unsupported text marker '%s'", type)
+            close.reverse()
+            html.append(text.escape(content["text"]))
+            html.extend(close)
+        else:
+            html.append(text.escape(content["text"]))
+
+    def _tiptap_process_children(self, html, content):
+        children = content.get("content")
+        if children:
+            for block in children:
+                self._tiptap_process_content(html, block)
+
+    def _tiptap_process_indentation(self, html, attrs):
+        itype = ("text-indent" if attrs.get("indentType") == "line" else
+                 "margin-inline-start")
+        isize = str((attrs.get("indentation") or 0) * 24)
+        html.append(itype + ":" + isize + "px")
+
+    def _tiptap_process_deviation(self, html, content):
+        dev = content["attrs"]["deviation"]
+        media = dev.get("media") or ()
+
+        html.append('<div class="jjNX2">')
+        html.append('<figure class="Qf-HY" data-da-type="da-deviation" '
+                    'data-deviation="" '
+                    'data-width="" data-link="" data-alignment="center">')
+
+        if "baseUri" in media:
+            url, formats = self._eclipse_media(media)
+            full = formats["fullview"]
+
+            html.append('<a href="')
+            html.append(text.escape(dev["url"]))
+            html.append('" class="_3ouD5" style="margin:0 auto;display:flex;'
+                        'align-items:center;justify-content:center;'
+                        'overflow:hidden;width:780px;height:')
+            html.append(str(780 * full["h"] / full["w"]))
+            html.append('px">')
+
+            html.append('<img src="')
+            html.append(text.escape(url))
+            html.append('" alt="')
+            html.append(text.escape(dev["title"]))
+            html.append('" style="width:100%;max-width:100%;display:block"/>')
+            html.append("</a>")
+
+        elif "textContent" in dev:
+            html.append('<div class="_32Hs4" style="width:350px">')
+
+            html.append('<a href="')
+            html.append(text.escape(dev["url"]))
+            html.append('" class="_3ouD5">')
+
+            html.append('''\
+<section class="Q91qI aG7Yi" style="width:350px;height:313px">\
+<div class="_16ECM _1xMkk" aria-hidden="true">\
+<svg height="100%" viewBox="0 0 15 12" preserveAspectRatio="xMidYMin slice" \
+fill-rule="evenodd">\
+<linearGradient x1="87.8481761%" y1="16.3690766%" \
+x2="45.4107524%" y2="71.4898596%" id="app-root-3">\
+<stop stop-color="#00FF62" offset="0%"></stop>\
+<stop stop-color="#3197EF" stop-opacity="0" offset="100%"></stop>\
+</linearGradient>\
+<text class="_2uqbc" fill="url(#app-root-3)" text-anchor="end" x="15" y="11">J\
+</text></svg></div><div class="_1xz9u">Literature</div><h3 class="_2WvKD">\
+''')
+            html.append(text.escape(dev["title"]))
+            html.append('</h3><div class="_2CPLm">')
+            html.append(text.escape(dev["textContent"]["excerpt"]))
+            html.append('</div></section></a></div>')
+
+        html.append('</figure></div>')
 
     def _extract_content(self, deviation):
         content = deviation["content"]
@@ -570,12 +822,32 @@ class DeviantartExtractor(Extractor):
                 username, folder["gallery_id"], public=False):
             cache[dev["deviationid"]] = dev if has_access else None
 
-        return cache[deviation["deviationid"]]
+        return cache.get(deviation["deviationid"])
 
     def _unwatch_premium(self):
         for username in self.unwatch:
             self.log.info("Unwatching %s", username)
             self.api.user_friends_unwatch(username)
+
+    def _eclipse_media(self, media, format="preview"):
+        url = [media["baseUri"]]
+
+        formats = {
+            fmt["t"]: fmt
+            for fmt in media["types"]
+        }
+
+        tokens = media.get("token") or ()
+        if tokens:
+            if len(tokens) <= 1:
+                fmt = formats[format]
+                if "c" in fmt:
+                    url.append(fmt["c"].replace(
+                        "<prettyName>", media["prettyName"]))
+            url.append("?token=")
+            url.append(tokens[-1])
+
+        return "".join(url), formats
 
     def _eclipse_to_oauth(self, eclipse_api, deviations):
         for obj in deviations:
@@ -619,7 +891,8 @@ class DeviantartGalleryExtractor(DeviantartExtractor):
     """Extractor for all deviations from an artist's gallery"""
     subcategory = "gallery"
     archive_fmt = "g_{_username}_{index}.{extension}"
-    pattern = BASE_PATTERN + r"/gallery(?:/all|/?\?catpath=)?/?$"
+    pattern = (BASE_PATTERN + r"/gallery"
+               r"(?:/all|/recommended-for-you|/?\?catpath=)?/?$")
     example = "https://www.deviantart.com/USER/gallery/"
 
     def deviations(self):
@@ -732,22 +1005,30 @@ class DeviantartStashExtractor(DeviantartExtractor):
     """Extractor for sta.sh-ed deviations"""
     subcategory = "stash"
     archive_fmt = "{index}.{extension}"
-    pattern = (r"(?:https?://)?(?:(?:www\.)?deviantart\.com/stash|sta\.sh)"
+    pattern = (r"(?:https?://)?(?:(?:www\.)?deviantart\.com/stash|sta\.s(h))"
                r"/([a-z0-9]+)")
-    example = "https://sta.sh/abcde"
+    example = "https://www.deviantart.com/stash/abcde"
 
     skip = Extractor.skip
 
     def __init__(self, match):
         DeviantartExtractor.__init__(self, match)
         self.user = None
-        self.stash_id = match.group(1)
 
     def deviations(self, stash_id=None):
         if stash_id is None:
-            stash_id = self.stash_id
-        url = "https://sta.sh/" + stash_id
-        page = self._limited_request(url).text
+            legacy_url, stash_id = self.groups
+        else:
+            legacy_url = False
+
+        if legacy_url and stash_id[0] == "2":
+            url = "https://sta.sh/" + stash_id
+            response = self._limited_request(url)
+            stash_id = response.url.rpartition("/")[2]
+            page = response.text
+        else:
+            url = "https://www.deviantart.com/stash/" + stash_id
+            page = self._limited_request(url).text
 
         if stash_id[0] == "0":
             uuid = text.extr(page, '//deviation/', '"')
@@ -759,19 +1040,11 @@ class DeviantartStashExtractor(DeviantartExtractor):
                 yield deviation
                 return
 
-        for item in text.extract_iter(
-                page, 'class="stash-thumb-container', '</div>'):
-            url = text.extr(item, '<a href="', '"')
-
-            if url:
-                stash_id = url.rpartition("/")[2]
-            else:
-                stash_id = text.extr(item, 'gmi-stashid="', '"')
-                stash_id = "2" + util.bencode(text.parse_int(
-                    stash_id), "0123456789abcdefghijklmnopqrstuvwxyz")
-
-            if len(stash_id) > 2:
-                yield from self.deviations(stash_id)
+        for sid in text.extract_iter(
+                page, 'href="https://www.deviantart.com/stash/', '"'):
+            if sid == stash_id or sid.endswith("#comments"):
+                continue
+            yield from self.deviations(sid)
 
 
 class DeviantartFavoriteExtractor(DeviantartExtractor):
@@ -980,7 +1253,6 @@ class DeviantartScrapsExtractor(DeviantartExtractor):
     subcategory = "scraps"
     directory_fmt = ("{category}", "{username}", "Scraps")
     archive_fmt = "s_{_username}_{index}.{extension}"
-    cookies_domain = ".deviantart.com"
     pattern = BASE_PATTERN + r"/gallery/(?:\?catpath=)?scraps\b"
     example = "https://www.deviantart.com/USER/gallery/scraps"
 
@@ -997,7 +1269,6 @@ class DeviantartSearchExtractor(DeviantartExtractor):
     subcategory = "search"
     directory_fmt = ("{category}", "Search", "{search_tags}")
     archive_fmt = "Q_{search_tags}_{index}.{extension}"
-    cookies_domain = ".deviantart.com"
     pattern = (r"(?:https?://)?www\.deviantart\.com"
                r"/search(?:/deviations)?/?\?([^#]+)")
     example = "https://www.deviantart.com/search?q=QUERY"
@@ -1049,7 +1320,6 @@ class DeviantartGallerySearchExtractor(DeviantartExtractor):
     """Extractor for deviantart gallery searches"""
     subcategory = "gallery-search"
     archive_fmt = "g_{_username}_{index}.{extension}"
-    cookies_domain = ".deviantart.com"
     pattern = BASE_PATTERN + r"/gallery/?\?(q=[^#]+)"
     example = "https://www.deviantart.com/USER/gallery?q=QUERY"
 
@@ -1137,7 +1407,7 @@ class DeviantartOAuthAPI():
 
         metadata = extractor.config("metadata", False)
         if not metadata:
-            metadata = bool(extractor.extra)
+            metadata = True if extractor.extra else False
         if metadata:
             self.metadata = True
 
@@ -1845,25 +2115,28 @@ JOURNAL_TEMPLATE_HTML = """text:<!DOCTYPE html>
 <head>
     <meta charset="utf-8">
     <title>{title}</title>
-    <link rel="stylesheet" href="https://st.deviantart.net/\
-css/deviantart-network_lc.css?3843780832">
-    <link rel="stylesheet" href="https://st.deviantart.net/\
-css/group_secrets_lc.css?3250492874">
-    <link rel="stylesheet" href="https://st.deviantart.net/\
-css/v6core_lc.css?4246581581">
-    <link rel="stylesheet" href="https://st.deviantart.net/\
-css/sidebar_lc.css?1490570941">
-    <link rel="stylesheet" href="https://st.deviantart.net/\
-css/writer_lc.css?3090682151">
-    <link rel="stylesheet" href="https://st.deviantart.net/\
-css/v6loggedin_lc.css?3001430805">
+    <link rel="stylesheet" href="https://st.deviantart.net\
+/css/deviantart-network_lc.css?3843780832"/>
+    <link rel="stylesheet" href="https://st.deviantart.net\
+/css/group_secrets_lc.css?3250492874"/>
+    <link rel="stylesheet" href="https://st.deviantart.net\
+/css/v6core_lc.css?4246581581"/>
+    <link rel="stylesheet" href="https://st.deviantart.net\
+/css/sidebar_lc.css?1490570941"/>
+    <link rel="stylesheet" href="https://st.deviantart.net\
+/css/writer_lc.css?3090682151"/>
+    <link rel="stylesheet" href="https://st.deviantart.net\
+/css/v6loggedin_lc.css?3001430805"/>
     <style>{css}</style>
-    <link rel="stylesheet" href="https://st.deviantart.net/\
-roses/cssmin/core.css?1488405371919" >
-    <link rel="stylesheet" href="https://st.deviantart.net/\
-roses/cssmin/peeky.css?1487067424177" >
-    <link rel="stylesheet" href="https://st.deviantart.net/\
-roses/cssmin/desktop.css?1491362542749" >
+    <link rel="stylesheet" href="https://st.deviantart.net\
+/roses/cssmin/core.css?1488405371919"/>
+    <link rel="stylesheet" href="https://st.deviantart.net\
+/roses/cssmin/peeky.css?1487067424177"/>
+    <link rel="stylesheet" href="https://st.deviantart.net\
+/roses/cssmin/desktop.css?1491362542749"/>
+    <link rel="stylesheet" href="https://static.parastorage.com/services\
+/da-deviation/2bfd1ff7a9d6bf10d27b98dd8504c0399c3f9974a015785114b7dc6b\
+/app.min.css"/>
 </head>
 <body id="deviantART-v7" class="bubble no-apps loggedout w960 deviantart">
     <div id="output">

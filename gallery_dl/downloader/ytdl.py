@@ -29,7 +29,7 @@ class YoutubeDLDownloader(DownloaderBase):
         }
 
         self.ytdl_instance = None
-        self.forward_cookies = self.config("forward-cookies", False)
+        self.forward_cookies = self.config("forward-cookies", True)
         self.progress = self.config("progress", 3.0)
         self.outtmpl = self.config("outtmpl")
 
@@ -48,11 +48,20 @@ class YoutubeDLDownloader(DownloaderBase):
                     self.log.debug("", exc_info=exc)
                     self.download = lambda u, p: False
                     return False
+
+                try:
+                    ytdl_version = module.version.__version__
+                except Exception:
+                    ytdl_version = ""
+                self.log.debug("Using %s version %s", module, ytdl_version)
+
                 self.ytdl_instance = ytdl_instance = ytdl.construct_YoutubeDL(
                     module, self, self.ytdl_opts)
                 if self.outtmpl == "default":
                     self.outtmpl = module.DEFAULT_OUTTMPL
             if self.forward_cookies:
+                self.log.debug("Forwarding cookies to %s",
+                               ytdl_instance.__module__)
                 set_cookie = ytdl_instance.cookiejar.set_cookie
                 for cookie in self.session.cookies:
                     set_cookie(cookie)
@@ -62,10 +71,18 @@ class YoutubeDLDownloader(DownloaderBase):
 
         info_dict = kwdict.pop("_ytdl_info_dict", None)
         if not info_dict:
+            url = url[5:]
             try:
-                info_dict = ytdl_instance.extract_info(url[5:], download=False)
+                manifest = kwdict.pop("_ytdl_manifest", None)
+                if manifest:
+                    info_dict = self._extract_manifest(
+                        ytdl_instance, url, manifest)
+                else:
+                    info_dict = self._extract_info(ytdl_instance, url)
             except Exception as exc:
                 self.log.debug("", exc_info=exc)
+                self.log.warning("%s: %s", exc.__class__.__name__, exc)
+
             if not info_dict:
                 return False
 
@@ -133,6 +150,42 @@ class YoutubeDLDownloader(DownloaderBase):
         for entry in info_dict["entries"]:
             ytdl_instance.process_info(entry)
         return True
+
+    def _extract_info(self, ytdl, url):
+        return ytdl.extract_info(url, download=False)
+
+    def _extract_manifest(self, ytdl, url, manifest):
+        extr = ytdl.get_info_extractor("Generic")
+        video_id = extr._generic_id(url)
+
+        if manifest == "hls":
+            try:
+                formats, subtitles = extr._extract_m3u8_formats_and_subtitles(
+                    url, video_id, "mp4")
+            except AttributeError:
+                formats = extr._extract_m3u8_formats(url, video_id, "mp4")
+                subtitles = None
+
+        elif manifest == "dash":
+            try:
+                formats, subtitles = extr._extract_mpd_formats_and_subtitles(
+                    url, video_id)
+            except AttributeError:
+                formats = extr._extract_mpd_formats(url, video_id)
+                subtitles = None
+
+        else:
+            self.log.error("Unsupported manifest type '%s'", manifest)
+            return None
+
+        info_dict = {
+            "id"       : video_id,
+            "title"    : video_id,
+            "formats"  : formats,
+            "subtitles": subtitles,
+        }
+        #  extr._extra_manifest_info(info_dict, url)
+        return ytdl.process_ie_result(info_dict, download=False)
 
     def _progress_hook(self, info):
         if info["status"] == "downloading" and \

@@ -105,6 +105,18 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://boosty.to/geekmedia/posts/31bb8fb6-83f1-404f-a597-f84bbe611d1d",
+    "#comment" : "video",
+    "#class"   : boosty.BoostyPostExtractor,
+},
+
+{
+    "#url"     : "https://boosty.to/xcang/posts/5d4d6f90-5d48-4442-a7e5-2164a858681d",
+    "#comment" : "audio",
+    "#class"   : boosty.BoostyPostExtractor,
+},
+
+{
     "#url"     : "https://boosty.to/",
     "#class"   : boosty.BoostyFeedExtractor,
     "#auth"    : True,
@@ -119,5 +131,24 @@ __tests__ = (
     "#auth"    : True,
 },
 
+{
+    "#url"     : "https://boosty.to/app/messages?dialogId=3598621",
+    "#class"   : boosty.BoostyDirectMessagesExtractor,
+    "#auth"    : True,
+    "#count"   : 7,
+
+    "count"    : 1,
+    "extension": "",
+    "file"     : dict,
+    "user"     : dict,
+
+    "post": {
+        "authorId": int,
+        "content" : list,
+        "date"    : "type:datetime",
+        "dialogId": 3598621,
+        "id"      : int,
+    },
+},
 
 )

@@ -383,18 +383,46 @@ Type
     |Duration|_
 Default
     * ``"0.5-1.5"``
-        ``ao3``, ``civitai``,
-        ``[Danbooru]``, ``[E621]``, ``[foolfuuka]:search``, ``itaku``,
+        ``ao3``,
+        ``arcalive``,
+        ``civitai``,
+        ``[Danbooru]``,
+        ``[E621]``,
+        ``[foolfuuka]:search``,
+        ``itaku``,
         ``koharu``,
-        ``newgrounds``, ``[philomena]``, ``pixiv:novel``, ``plurk``,
-        ``poipiku`` , ``pornpics``, ``soundgasm``, ``urlgalleries``,
-        ``vk``, ``zerochan``
+        ``newgrounds``,
+        ``[philomena]``,
+        ``pixiv:novel``,
+        ``plurk``,
+        ``poipiku`` ,
+        ``pornpics``,
+        ``scrolller``,
+        ``soundgasm``,
+        ``urlgalleries``,
+        ``vk``,
+        ``weebcentral``,
+        ``xfolio``,
+        ``zerochan``
+    * ``"1.0"``
+        ``furaffinity``
     * ``"1.0-2.0"``
-        ``flickr``, ``weibo``, ``[wikimedia]``
+        ``flickr``,
+        ``pexels``,
+        ``weibo``,
+        ``[wikimedia]``
+    * ``"1.4"``
+        ``wallhaven``
     * ``"2.0-4.0"``
-        ``behance``, ``imagefap``, ``[Nijie]``
+        ``behance``,
+        ``imagefap``,
+        ``[Nijie]``
     * ``"3.0-6.0"``
-        ``exhentai``, ``idolcomplex``, ``[reactor]``, ``readcomiconline``
+        ``bilibili``,
+        ``exhentai``,
+        ``idolcomplex``,
+        ``[reactor]``,
+        ``readcomiconline``
     * ``"6.0-6.1"``
         ``twibooru``
     * ``"6.0-12.0"``
@@ -443,6 +471,7 @@ Description
     * ``nijie`` (R)
     * ``pillowfort``
     * ``sankaku``
+    * ``scrolller``
     * ``seiga``
     * ``subscribestar``
     * ``tapas``
@@ -462,7 +491,7 @@ Description
     `cookies <extractor.*.cookies_>`__ is required
 
     Note: Leave the ``password`` value empty or undefined
-    to be prompted for a passeword when performing a login
+    to be prompted for a password when performing a login
     (see `getpass() <https://docs.python.org/3/library/getpass.html#getpass.getpass>`__).
 
 
@@ -595,8 +624,20 @@ Description
       ``scheme://host`` as key.
       See `Requests' proxy documentation`_ for more details.
 
-    Note: If a proxy URLs does not include a scheme,
+    Note: If a proxy URL does not include a scheme,
     ``http://`` is assumed.
+
+
+extractor.*.proxy-env
+---------------------
+Type
+    ``bool``
+Default
+    ``true``
+Description
+    Collect proxy configuration information from environment variables
+    (``HTTP_PROXY``, ``HTTPS_PROXY``, ``NO_PROXY``)
+    and Windows Registry settings.
 
 
 extractor.*.source-address
@@ -619,16 +660,20 @@ extractor.*.user-agent
 Type
     ``string``
 Default
-    ``"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0"``
+    * ``"gallery-dl/VERSION"``: ``[Danbooru]``, ``mangadex``
+    * ``"gallery-dl/VERSION (by mikf)"``: ``[E621]``
+    * ``"Patreon/72.2.28 (Android; Android 14; Scale/2.10)"``: ``patreon``
+    * ``"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:LATEST) Gecko/20100101 Firefox/LATEST"``: otherwise
 Description
-    User-Agent header value to be used for HTTP requests.
+    User-Agent header value used for HTTP requests.
 
     Setting this value to ``"browser"`` will try to automatically detect
-    and use the User-Agent used by the system's default browser.
+    and use the ``User-Agent`` header of the system's default browser.
 
-    Note: This option has no effect on
-    `pixiv`, `e621`, `mangadex`, and `patreon`
-    extractors, as these need specific values to function correctly.
+    Note:
+    This option has *no* effect if
+    `extractor.browser <extractor.*.browser_>`__
+    is enabled.
 
 
 extractor.*.browser
@@ -646,6 +691,15 @@ Description
 
     Optionally, the operating system used in the ``User-Agent`` header can be
     specified after a ``:`` (``windows``, ``linux``, or ``macos``).
+
+    Note:
+    This option overrides
+    `user-agent <extractor.*.user-agent_>`__
+    and sets custom
+    `headers <extractor.*.headers_>`__
+    and
+    `ciphers <extractor.*.ciphers_>`__
+    defaults.
 
     Note: ``requests`` and ``urllib3`` only support HTTP/1.1, while a real
     browser would use HTTP/2.
@@ -702,7 +756,7 @@ Example
 
 Description
     List of TLS/SSL cipher suites in
-    `OpenSSL cipher list format <https://www.openssl.org/docs/manmaster/man1/openssl-ciphers.html#CIPHER-LIST-FORMAT>`__
+    `OpenSSL cipher list format <https://docs.openssl.org/master/man1/openssl-ciphers/#cipher-list-format>`__
     to be passed to
     `ssl.SSLContext.set_ciphers() <https://docs.python.org/3/library/ssl.html#ssl.SSLContext.set_ciphers>`__
 
@@ -871,11 +925,13 @@ Description
 extractor.*.archive
 -------------------
 Type
-    |Path|_
+    * ``string``
+    * |Path|_
 Default
     ``null``
 Example
-    ``"$HOME/.archives/{category}.sqlite3"``
+    * ``"$HOME/.archives/{category}.sqlite3"``
+    * ``"postgresql://user:pass@host/database"``
 Description
     File to store IDs of downloaded files in. Downloads of files
     already recorded in this archive file will be
@@ -885,6 +941,11 @@ Description
     database, as either lookup operations are significantly faster or
     memory requirements are significantly lower when the
     amount of stored IDs gets reasonably large.
+
+    If this value is a
+    `PostgreSQL Connection URI <https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS>`__,
+    the archive will use this PostgreSQL database as backend (requires
+    `Psycopg <https://www.psycopg.org/>`__).
 
     Note: Archive files that do not already exist get generated automatically.
 
@@ -943,7 +1004,8 @@ extractor.*.archive-prefix
 Type
     ``string``
 Default
-    ``"{category}"``
+    * ``""`` when `archive-table <extractor.*.archive-table_>`__ is set
+    * ``"{category}"`` otherwise
 Description
     Prefix for archive IDs.
 
@@ -959,6 +1021,18 @@ Description
 
     See `<https://www.sqlite.org/pragma.html#toc>`__
     for available ``PRAGMA`` statements and further details.
+
+
+extractor.*.archive-table
+-------------------------
+Type
+    ``string``
+Default
+    ``"archive"``
+Example
+    ``"{category}"``
+Description
+    `Format string`_ selecting the archive database table name.
 
 
 extractor.*.actions
@@ -1041,7 +1115,8 @@ Description
 extractor.*.postprocessors
 --------------------------
 Type
-    ``list`` of |Postprocessor Configuration|_ objects
+    * |Postprocessor Configuration|_ object
+    * ``list`` of |Postprocessor Configuration|_ objects
 Example
     .. code:: json
 
@@ -1320,6 +1395,27 @@ Description
     Format(s) to download.
 
 
+extractor.arcalive.emoticons
+----------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Download emoticon images.
+
+
+extractor.arcalive.gifs
+-----------------------
+Type
+    ``bool``
+Default
+    ``true``
+Description
+    Check if ``.mp4`` videos have a ``.gif`` version
+    and download those instead.
+
+
 extractor.artstation.external
 -----------------------------
 Type
@@ -1385,6 +1481,29 @@ Description
     * ``false``: Get posts from "Latest Updates" pages
 
 
+extractor.batoto.domain
+-----------------------
+Type
+    ``string``
+Default
+    ``"auto"``
+Example
+    ``"mangatoto.org"``
+Description
+    Specifies the domain used by ``batoto`` extractors.
+
+    ``"auto"`` | ``"url"``
+        Use the input URL's domain
+    ``"nolegacy"``
+        Use the input URL's domain
+        - replace legacy domains with ``"xbato.org"``
+    ``"nowarn"``
+        Use the input URL's domain
+        - do not warn about legacy domains
+    any ``string``
+        Use this domain
+
+
 extractor.bbc.width
 -------------------
 Type
@@ -1437,7 +1556,10 @@ Type
     * ``string``
     * ``list`` of ``strings``
 Default
-    ``"media"``
+    * ``"posts"`` if
+      `reposts <extractor.bluesky.reposts_>`__ or
+      `quoted <extractor.bluesky.quoted_>`__ is enabled
+    * ``"media"`` otherwise
 Example
     * ``"avatar,background,posts"``
     * ``["avatar", "background", "posts"]``
@@ -1446,6 +1568,7 @@ Description
     when processing a user profile.
 
     Possible values are
+    ``"info"``,
     ``"avatar"``,
     ``"background"``,
     ``"posts"``,
@@ -1472,7 +1595,7 @@ Description
 
     * ``facets``: ``hashtags``, ``mentions``, and ``uris``
     * ``user``: detailed ``user`` metadata for the user referenced in the input URL
-      (See `app.bsky.actor.getProfile <https://www.docs.bsky.app/docs/api/app-bsky-actor-get-profile>`__).
+      (See `app.bsky.actor.getProfile <https://docs.bsky.app/docs/api/app-bsky-actor-get-profile>`__).
 
 
 
@@ -1485,7 +1608,17 @@ Default
 Description
     Sets the maximum depth of returned reply posts.
 
-    (See `depth` parameter of `app.bsky.feed.getPostThread <https://www.docs.bsky.app/docs/api/app-bsky-feed-get-post-thread>`__)
+    (See `depth` parameter of `app.bsky.feed.getPostThread <https://docs.bsky.app/docs/api/app-bsky-feed-get-post-thread>`__)
+
+
+extractor.bluesky.quoted
+------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Fetch media from quoted posts.
 
 
 extractor.bluesky.reposts
@@ -1552,8 +1685,25 @@ Description
 
     | If this is a ``list``, it selects which format to try to download.
     | Possibly available formats are
-      ``"quad_hd"``, ``"ultra_hd"``, ``"full_hd"``,
-      ``"high"``, ``"medium"``, ``"low"``
+
+    * ``ultra_hd`` (2160p)
+    * ``quad_hd`` (1440p)
+    * ``full_hd`` (1080p)
+    * ``high`` (720p)
+    * ``medium`` (480p)
+    * ``low`` (360p)
+    * ``lowest`` (240p)
+    * ``tiny`` (144p)
+
+
+extractor.bunkr.endpoint
+------------------------
+Type
+    ``string``
+Default
+    ``"/api/_001"``
+Description
+    API endpoint for retrieving file URLs.
 
 
 extractor.bunkr.tlds
@@ -1590,12 +1740,12 @@ extractor.civitai.api
 Type
     ``string``
 Default
-    ``"rest"``
+    ``"trpc"``
 Description
     Selects which API endpoints to use.
 
     * ``"rest"``: `Public REST API <https://developer.civitai.com/docs/api/public-rest>`__
-    * ``"trpc"``: Internal TRPC API
+    * ``"trpc"``: Internal tRPC API
 
 
 extractor.civitai.api-key
@@ -1624,6 +1774,44 @@ Description
     ``model``,
     ``image``,
     ``gallery``.
+
+
+extractor.civitai.include
+-------------------------
+Type
+    * ``string``
+    * ``list`` of ``strings``
+Default
+    ``["user-models", "user-posts"]``
+Description
+    A (comma-separated) list of subcategories to include
+    when processing a user profile.
+
+    Possible values are
+
+    * ``"user-models"``
+    * ``"user-posts"``
+    * ``"user-images"``
+    * ``"user-videos"``
+
+    It is possible to use ``"all"`` instead of listing all values separately.
+
+
+extractor.civitai.metadata
+--------------------------
+Type
+    * ``bool``
+    * ``string``
+    * ``list`` of ``strings``
+Default
+    ``false``
+Example
+    * ``"generation"``
+    * ``["generation"]``
+Description
+    Extract additional ``generation`` metadata.
+
+    Note: This requires 1 additional HTTP request per image or video.
 
 
 extractor.civitai.nsfw
@@ -1670,46 +1858,6 @@ Description
     to download images in JPEG format at their original resolution.
 
 
-extractor.cohost.asks
----------------------
-Type
-    ``bool``
-Default
-    ``true``
-Description
-    Extract ``ask`` posts.
-
-
-extractor.cohost.pinned
------------------------
-Type
-    ``bool``
-Default
-    ``false``
-Description
-    Extract pinned posts.
-
-
-extractor.cohost.replies
-------------------------
-Type
-    ``bool``
-Default
-    ``true``
-Description
-    Extract reply posts.
-
-
-extractor.cohost.shares
------------------------
-Type
-    ``bool``
-Default
-    ``false``
-Description
-    Extract shared posts.
-
-
 extractor.cyberdrop.domain
 --------------------------
 Type
@@ -1725,8 +1873,8 @@ Description
     uses the same domain as a given input URL.
 
 
-extractor.danbooru.external
----------------------------
+extractor.[Danbooru].external
+-----------------------------
 Type
     ``bool``
 Default
@@ -1736,8 +1884,27 @@ Description
     follow the ``source`` and download from there if possible.
 
 
-extractor.danbooru.ugoira
--------------------------
+extractor.[Danbooru].pool.order-posts
+-------------------------------------
+Type
+    ``string``
+Default
+    ``"pool"``
+Description
+    Controls the order in which pool posts are returned.
+
+    ``"pool"`` | ``"pool_asc"`` | ``"asc"`` | ``"asc_pool"``
+        Pool order
+    ``"pool_desc"`` | ``"desc_pool"`` | ``"desc"``
+        Reverse Pool order
+    ``"id"`` | ``"id_desc"`` | ``"desc_id"``
+        Descending Post ID order
+    ``"id_asc"`` | ``"asc_id"``
+        Ascending Post ID order
+
+
+extractor.[Danbooru].ugoira
+---------------------------
 Type
     ``bool``
 Default
@@ -1758,7 +1925,7 @@ Type
 Default
     ``false``
 Example
-    * ``replacements,comments,ai_tags``
+    * ``"replacements,comments,ai_tags"``
     * ``["replacements", "comments", "ai_tags"]``
 Description
     Extract additional metadata
@@ -1786,45 +1953,6 @@ Description
     Note: Changing this setting is normally not necessary. When the value is
     greater than the per-page limit, gallery-dl will stop after the first
     batch. The value cannot be less than 1.
-
-
-extractor.derpibooru.api-key
-----------------------------
-Type
-    ``string``
-Default
-    ``null``
-Description
-    Your `Derpibooru API Key <https://derpibooru.org/registrations/edit>`__,
-    to use your account's browsing settings and filters.
-
-
-extractor.derpibooru.filter
----------------------------
-Type
-    ``integer``
-Default
-    ``56027`` (`Everything <https://derpibooru.org/filters/56027>`_ filter)
-Description
-    The content filter ID to use.
-
-    Setting an explicit filter ID overrides any default filters and can be used
-    to access 18+ content without `API Key <extractor.derpibooru.api-key_>`_.
-
-    See `Filters <https://derpibooru.org/filters>`_ for details.
-
-
-extractor.derpibooru.svg
-------------------------
-Type
-    ``bool``
-Default
-    ``true``
-Description
-    Download SVG versions of images when available.
-
-    Try to download the ``view_url`` version of these posts
-    when this option is disabled.
 
 
 extractor.deviantart.auto-watch
@@ -2158,6 +2286,39 @@ Description
     | Leave ``SIZE`` empty to download the regular, small avatar format.
 
 
+extractor.discord.embeds
+------------------------
+Type
+    ``list`` of ``strings``
+Default
+    ``["image", "gifv", "video"]``
+Description
+    Selects which embed types to download from.
+
+    Supported embed types are
+    ``image``, ``gifv``, ``video``, ``rich``, ``article``, ``link``.
+
+
+extractor.discord.threads
+-------------------------
+Type
+    ``bool``
+Default
+    ``true``
+Description
+    Extract threads from Discord text channels.
+
+
+extractor.discord.token
+-----------------------
+Type
+    ``string``
+Description
+    Discord Bot Token for API requests.
+
+    You can follow `this guide <https://github.com/Tyrrrz/DiscordChatExporter/blob/master/.docs/Token-and-IDs.md#how-to-get-a-user-token>`__ to get a token.
+
+
 extractor.[E621].metadata
 -------------------------
 Type
@@ -2293,6 +2454,56 @@ Description
     * ``"hitomi"``:  Download the corresponding gallery from ``hitomi.la``
 
 
+extractor.exhentai.tags
+-----------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Group ``tags`` by type and
+    provide them as ``tags_<type>`` metadata fields,
+    for example ``tags_artist`` or ``tags_character``.
+
+
+extractor.facebook.author-followups
+-----------------------------------
+Type
+    ``bool``
+Default
+    ``false``
+description
+    Extract comments that include photo attachments made by the author of the post.
+
+
+extractor.facebook.videos
+-------------------------
+Type
+    * ``bool``
+    * ``string``
+Default
+    ``true``
+Description
+    Control video download behavior.
+
+    * ``true``: Extract and download video & audio separately.
+    * ``"ytdl"``: Let |ytdl| handle video extraction and download, and merge video & audio streams.
+    * ``false``: Ignore videos.
+
+
+extractor.fanbox.comments
+-------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Extract ``comments`` metadata.
+
+    Note: This requires 1 or more additional API requests per post,
+    depending on the number of comments.
+
+
 extractor.fanbox.embeds
 -----------------------
 Type
@@ -2319,10 +2530,19 @@ Type
 Default
     ``false``
 Example
-    * ``user,plan``
-    * ``["user", "plan"]``
+    * ``user,plan,comments``
+    * ``["user", "plan", "comments"]``
 Description
     Extract ``plan`` and extended ``user`` metadata.
+
+    Supported fields when selecting which data to extract are
+
+    * ``comments``
+    * ``plan``
+    * ``user``
+
+    Note: ``comments`` can also be enabled via
+    `fanbox.comments <extractor.fanbox.comments_>`__
 
 
 extractor.flickr.access-token & .access-token-secret
@@ -2775,6 +2995,19 @@ Description
     Download video files.
 
 
+extractor.kemonoparty.archives
+------------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Extract additional metadata for ``archives`` files, including
+    ``file``, ``file_list``, and ``password``.
+
+    Note: This requires 1 additional HTTP request per ``archives`` file.
+
+
 extractor.kemonoparty.comments
 ------------------------------
 Type
@@ -2859,9 +3092,9 @@ extractor.kemonoparty.metadata
 Type
     ``bool``
 Default
-    ``false``
+    ``true``
 Description
-    Extract ``username`` metadata.
+    Extract ``username`` and ``user_profile`` metadata.
 
 
 extractor.kemonoparty.revisions
@@ -2893,6 +3126,16 @@ Description
     * ``"asc"``: Ascending order (oldest first)
     * ``"desc"``: Descending order (newest first)
     * ``"reverse"``: Same as ``"asc"``
+
+
+extractor.khinsider.covers
+--------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Download album cover images.
 
 
 extractor.khinsider.format
@@ -2938,6 +3181,18 @@ Description
 
     | Possible formats are
     | ``"780"``, ``"980"``, ``"1280"``, ``"1600"``, ``"0"`` (original)
+
+
+extractor.koharu.tags
+---------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Group ``tags`` by type and
+    provide them as ``tags_<type>`` metadata fields,
+    for example ``tags_artist`` or ``tags_character``.
 
 
 extractor.lolisafe.domain
@@ -3300,10 +3555,83 @@ Type
 Default
     ``["images", "image_large", "attachments", "postfile", "content"]``
 Description
-    Determines the type and order of files to be downloaded.
+    Determines types and order of files to download.
 
-    Available types are
-    ``postfile``, ``images``, ``image_large``, ``attachments``, and ``content``.
+    Available types:
+
+    * ``postfile``
+    * ``images``
+    * ``image_large``
+    * ``attachments``
+    * ``content``
+
+
+extractor.patreon.format-images
+-------------------------------
+Type
+    ``string``
+Default
+    ``"download_url"``
+Description
+    Selects the format of ``images`` `files <extractor.patreon.files_>`__.
+
+    Possible formats:
+
+    * ``download_url`` (``"a":1,"p":1``)
+    * ``url`` (``"w":620``)
+    * ``original`` (``"q":100,"webp":0``)
+    * ``default`` (``"w":620``)
+    * ``default_small`` (``"w":360``)
+    * ``default_blurred`` (``"w":620``)
+    * ``default_blurred_small`` (``"w":360``)
+    * ``thumbnail`` (``"h":360,"w":360``)
+    * ``thumbnail_large`` (``"h":1080,"w":1080``)
+    * ``thumbnail_small`` (``"h":100,"w":100``)
+
+
+extractor.[philomena].api-key
+-----------------------------
+Type
+    ``string``
+Default
+    ``null``
+Description
+    Your account's API Key,
+    to use your personal browsing settings and filters.
+
+
+extractor.[philomena].filter
+----------------------------
+Type
+    ``integer``
+Default
+    :``derpibooru``:
+        ``56027`` (`Everything <https://derpibooru.org/filters/56027>`__ filter)
+    :``ponybooru``:
+        ``3`` (`Nah. <https://ponybooru.org/filters/3>`__ filter)
+    :otherwise:
+        ``2``
+
+Description
+    The content filter ID to use.
+
+    Setting an explicit filter ID overrides any default filters and can be used
+    to access 18+ content without `API Key <extractor.[philomena].api-key_>`_.
+
+    See `Filters <https://derpibooru.org/filters>`_ for details.
+
+
+extractor.[philomena].svg
+-------------------------
+Type
+    ``bool``
+Default
+    ``true``
+Description
+    Download SVG versions of images when available.
+
+    Try to download the ``view_url`` version of these posts
+    when this option is disabled.
 
 
 extractor.pillowfort.external
@@ -3357,6 +3685,16 @@ Default
     ``true``
 Description
     Include pins from board sections.
+
+
+extractor.pinterest.stories
+---------------------------
+Type
+    ``bool``
+Default
+    ``true``
+Description
+    Extract files from story pins.
 
 
 extractor.pinterest.videos
@@ -3465,7 +3803,31 @@ Description
     `your own account <extractor.pixiv.refresh-token_>`__,
     fetch bookmark tags as ``tags_bookmark`` metadata.
 
-    Note: This requires 1 additional API call per bookmarked post.
+    Note: This requires 1 additional API request per bookmarked post.
+
+
+extractor.pixiv.captions
+------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    For works with seemingly empty ``caption`` metadata,
+    try to grab the actual ``caption`` value using the AJAX API.
+
+
+extractor.pixiv.comments
+------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Fetch ``comments`` metadata.
+
+    Note: This requires 1 or more additional API requests per post,
+    depending on the number of comments.
 
 
 extractor.pixiv.work.related
@@ -3626,6 +3988,16 @@ Description
     Note: This requires 1 additional API call for every 100 extra comments.
 
 
+extractor.reddit.embeds
+-----------------------
+Type
+    ``bool``
+Default
+    ``true``
+Description
+    Download embedded comments media.
+
+
 extractor.reddit.date-min & .date-max
 -------------------------------------
 Type
@@ -3691,6 +4063,17 @@ Description
     at 600 requests every 10 minutes/600 seconds.
 
 
+extractor.reddit.selftext
+-------------------------
+Type
+    ``bool``
+Default
+    * ``true`` if `comments <extractor.reddit.comments_>`__ are enabled
+    * ``false`` otherwise
+Description
+    Follow links in the original post's ``selftext``.
+
+
 extractor.reddit.videos
 -----------------------
 Type
@@ -3737,6 +4120,21 @@ Description
     If the format is given as ``string``, it will be extended with
     ``["hd", "sd", "gif"]``. Use a list with one element to
     restrict it to only one possible format.
+
+
+extractor.rule34xyz.format
+---------------------------
+Type
+    * ``string``
+    * ``list`` of ``strings``
+Default
+    ``["10", "40", "41", "2"]``
+Example
+    ``"33,34,4"``
+Description
+    Selects the file format to extract.
+
+    When more than one format is given, the first available one is selected.
 
 
 extractor.sankaku.id-format
@@ -4014,6 +4412,100 @@ Description
 
     To generate a token, visit ``/user/USERNAME/list-tokens``
     and click ``Create Token``.
+
+
+extractor.tenor.format
+----------------------
+Type
+    * ``string``
+    * ``list`` of ``strings``
+Default
+    ``["gif", "mp4", "webm", "webp"]``
+Description
+    List of names of the preferred animation format.
+
+    If a selected format is not available, the next one in the list will be
+    tried until a format is found.
+
+    Possible formats include
+
+    * ``"gif"``
+    * ``"gif_transparent"``
+    * ``"gifpreview"``
+    * ``"mediumgif"``
+    * ``"tinygif"``
+    * ``"tinygif_transparent"``
+    * ``"mp4"``
+    * ``"tinymp4"``
+    * ``"webm"``
+    * ``"webp"``
+    * ``"webp_transparent"``
+    * ``"tinywebp"``
+    * ``"tinywebp_transparent"``
+
+
+extractor.tiktok.audio
+----------------------
+Type
+    * ``bool``
+    * ``string``
+Default
+    ``true``
+Description
+    Controls audio download behavior.
+
+    * ``true``: Download audio tracks
+    * ``"ytdl"``: Download audio tracks using |ytdl|
+    * ``false``: Ignore audio tracks
+
+
+extractor.tiktok.videos
+-----------------------
+Type
+    ``bool``
+Default
+    ``true``
+Description
+    Download videos using |ytdl|.
+
+
+extractor.tiktok.user.avatar
+----------------------------
+Type
+    ``bool``
+Default
+    ``true``
+Description
+    Download user avatars.
+
+
+extractor.tiktok.user.module
+----------------------------
+Type
+    ``string``
+Default
+    ``null``
+Description
+    Name or filesystem path of the ``ytdl`` Python module
+    to extract posts from a ``tiktok`` user profile with.
+
+    See `extractor.ytdl.module`_.
+
+
+extractor.tiktok.user.tiktok-range
+----------------------------------
+Type
+    ``string``
+Default
+    ``""``
+Example
+    ``"1-20"``
+Description
+    Range or playlist indices of ``tiktok`` user posts to extract.
+
+    See
+    `ytdl/playlist_items <https://github.com/yt-dlp/yt-dlp/blob/3042afb5fe342d3a00de76704cd7de611acc350e/yt_dlp/YoutubeDL.py#L289>`__
+    for details.
 
 
 extractor.tumblr.avatar
@@ -4393,7 +4885,14 @@ Description
     `fallback <extractor.*.fallback_>`_ URLs.
 
     Known available sizes are
-    ``4096x4096``, ``orig``, ``large``, ``medium``, and ``small``.
+
+    * ``orig``
+    * ``large``
+    * ``medium``
+    * ``small``
+    * ``4096x4096``
+    * ``900x900``
+    * ``360x360``
 
 
 extractor.twitter.logout
@@ -4451,7 +4950,7 @@ Default
     ``true``
 Description
     When receiving a "Could not authenticate you" error while logged in with
-    `username & passeword <extractor.*.username & .password_>`__,
+    `username & password <extractor.*.username & .password_>`__,
     refresh the current login session and
     try to continue from where it left off.
 
@@ -4624,7 +5123,7 @@ extractor.vipergirls.domain
 Type
     ``string``
 Default
-    ``"vipergirls.to"``
+    ``"viper.click"``
 Description
     Specifies the domain used by ``vipergirls`` extractors.
 
@@ -4642,6 +5141,16 @@ Description
 
     Note: Requires `login <extractor.*.username & .password_>`__
     or `cookies <extractor.*.cookies_>`__
+
+
+extractor.vk.offset
+-------------------
+Type
+    ``integer``
+Default
+    ``0``
+Description
+    Custom ``offset`` starting value when paginating over image results.
 
 
 extractor.vsco.include
@@ -4792,6 +5301,16 @@ Description
     Download ``livephoto`` files.
 
 
+extractor.weibo.movies
+----------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Download ``movie`` videos.
+
+
 extractor.weibo.retweets
 ------------------------
 Type
@@ -4825,6 +5344,16 @@ Description
     Number of results to return in a single API query.
 
     The value must be between 10 and 500.
+
+
+extractor.wikimedia.subcategories
+---------------------------------
+Type
+    ``bool``
+Default
+    ``true``
+Description
+    For ``Category:`` pages, recursively descent into subcategories.
 
 
 extractor.ytdl.cmdline-args
@@ -4912,11 +5441,15 @@ Description
 extractor.ytdl.module
 ---------------------
 Type
-    ``string``
+    * ``string``
+    * |Path|_
 Default
     ``null``
+Example
+    * ``"yt-dlp"``
+    * ``"/home/user/.local/lib/python3.13/site-packages/youtube_dl"``
 Description
-    Name of the ``ytdl`` Python module to import.
+    Name or filesystem path of the ``ytdl`` Python module to import.
 
     Setting this to ``null`` will try to import ``"yt_dlp"``
     followed by ``"youtube_dl"`` as fallback.
@@ -4942,6 +5475,22 @@ Description
     `yt-dlp's docstrings <https://github.com/yt-dlp/yt-dlp/blob/2024.05.27/yt_dlp/YoutubeDL.py#L200>`__
     /
     `youtube-dl's docstrings <https://github.com/ytdl-org/youtube-dl/blob/0153b387e57e0bb8e580f1869f85596d2767fb0d/youtube_dl/YoutubeDL.py#L157>`__
+
+
+extractor.zerochan.extensions
+-----------------------------
+Type
+    * ``string``
+    * ``list`` of ``strings``
+Default
+    ``["jpg", "png", "webp", "gif"]``
+Example
+    * ``"gif"``
+    * ``["webp", "gif", "jpg"}``
+Description
+    List of filename extensions to try when dynamically building download URLs
+    (`"pagination": "api" <extractor.zerochan.pagination_>`__ +
+    `"metadata": false <extractor.zerochan.metadata_>`__)
 
 
 extractor.zerochan.metadata
@@ -4988,8 +5537,9 @@ Type
 Default
     ``false``
 Description
-    Categorize tags by their respective types
-    and provide them as ``tags_<type>`` metadata fields.
+    Group ``tags`` by type and
+    provide them as ``tags_<type>`` metadata fields,
+    for example ``tags_artist`` or ``tags_character``.
 
     Note: This requires 1 additional HTTP request per post.
 
@@ -5015,7 +5565,7 @@ Default
     ``"file_url"``
 Example
     * ``"preview_url"``
-    * ``["sample_url", "preview_url", "file_url"}``
+    * ``["sample_url", "preview_url", "file_url"]``
 Description
     Alternate field name to retrieve download URLs from.
 
@@ -5271,6 +5821,21 @@ Description
     regardless of this option.
 
 
+downloader.http.sleep-429
+-------------------------
+Type
+    |Duration|_
+Default
+    `extractor.*.sleep-429`_
+Description
+    Number of seconds to sleep when receiving a `429 Too Many Requests`
+    response before `retrying <downloader.*.retries_>`__ the request.
+
+    Note: Requires
+    `retry-codes <downloader.http.retry-codes_>`__
+    to include ``429``.
+
+
 downloader.http.validate
 ------------------------
 Type
@@ -5333,7 +5898,7 @@ downloader.ytdl.forward-cookies
 Type
     ``bool``
 Default
-    ``false``
+    ``true``
 Description
     Forward gallery-dl's cookies to |ytdl|.
 
@@ -5355,11 +5920,15 @@ Description
 downloader.ytdl.module
 ----------------------
 Type
-    ``string``
+    * ``string``
+    * |Path|_
 Default
     ``null``
+Example
+    * ``"yt-dlp"``
+    * ``"/home/user/.local/lib/python3.13/site-packages/youtube_dl"``
 Description
-    Name of the ``ytdl`` Python module to import.
+    Name or filesystem path of the ``ytdl`` Python module to import.
 
     Setting this to ``null`` will try to import ``"yt_dlp"``
     followed by ``"youtube_dl"`` as fallback.
@@ -5717,10 +6286,13 @@ Default
     .. code:: json
 
         {
-            "Pictures": ["jpg", "jpeg", "png", "gif", "bmp", "svg", "webp"],
-            "Video"   : ["flv", "ogv", "avi", "mp4", "mpg", "mpeg", "3gp", "mkv", "webm", "vob", "wmv"],
-            "Music"   : ["mp3", "aac", "flac", "ogg", "wma", "m4a", "wav"],
-            "Archives": ["zip", "rar", "7z", "tar", "gz", "bz2"]
+            "Pictures" : ["jpg", "jpeg", "png", "gif", "bmp", "svg", "webp",
+                          "avif", "heic", "heif", "ico", "psd"],
+            "Video"    : ["flv", "ogv", "avi", "mp4", "mpg", "mpeg", "3gp", "mkv",
+                          "webm", "vob", "wmv", "m4v", "mov"],
+            "Music"    : ["mp3", "aac", "flac", "ogg", "wma", "m4a", "wav"],
+            "Archives" : ["zip", "rar", "7z", "tar", "gz", "bz2"],
+            "Documents": ["txt", "pdf"]
         }
 
 Description
@@ -5779,16 +6351,18 @@ Description
 exec.archive
 ------------
 Type
-    |Path|_
+    * ``string``
+    * |Path|_
 Description
-    File to store IDs of executed commands in,
+    Database to store IDs of executed commands in,
     similar to `extractor.*.archive`_.
 
-    ``archive-format``, ``archive-prefix``, and ``archive-pragma`` options,
-    akin to
-    `extractor.*.archive-format`_,
-    `extractor.*.archive-prefix`_, and
-    `extractor.*.archive-pragma`_, are supported as well.
+    The following archive options are also supported:
+
+    * `archive-format <extractor.*.archive-format_>`__
+    * `archive-prefix <extractor.*.archive-prefix_>`__
+    * `archive-pragma <extractor.*.archive-pragma_>`__
+    * `archive-table  <extractor.*.archive-table_>`__
 
 
 exec.async
@@ -6045,6 +6619,8 @@ Description
         After a file got moved to its target location
     ``skip``
         When skipping a file download
+    ``error``
+        After a file download failed
     ``post``
         When starting to download all files of a `post`,
         e.g. a Tweet on Twitter or a post on Patreon.
@@ -6226,16 +6802,18 @@ Description
 metadata.archive
 ----------------
 Type
-    |Path|_
+    * ``string``
+    * |Path|_
 Description
-    File to store IDs of generated metadata files in,
+    Database to store IDs of generated metadata files in,
     similar to `extractor.*.archive`_.
 
-    ``archive-format``, ``archive-prefix``, and ``archive-pragma`` options,
-    akin to
-    `extractor.*.archive-format`_,
-    `extractor.*.archive-prefix`_, and
-    `extractor.*.archive-pragma`_, are supported as well.
+    The following archive options are also supported:
+
+    * `archive-format <extractor.*.archive-format_>`__
+    * `archive-prefix <extractor.*.archive-prefix_>`__
+    * `archive-pragma <extractor.*.archive-pragma_>`__
+    * `archive-table  <extractor.*.archive-table_>`__
 
 
 metadata.mtime
@@ -6306,16 +6884,18 @@ Description
 python.archive
 --------------
 Type
-    |Path|_
+    * ``string``
+    * |Path|_
 Description
-    File to store IDs of called Python functions in,
+    Database to store IDs of called Python functions in,
     similar to `extractor.*.archive`_.
 
-    ``archive-format``, ``archive-prefix``, and ``archive-pragma`` options,
-    akin to
-    `extractor.*.archive-format`_,
-    `extractor.*.archive-prefix`_, and
-    `extractor.*.archive-pragma`_, are supported as well.
+    The following archive options are also supported:
+
+    * `archive-format <extractor.*.archive-format_>`__
+    * `archive-prefix <extractor.*.archive-prefix_>`__
+    * `archive-pragma <extractor.*.archive-pragma_>`__
+    * `archive-table  <extractor.*.archive-table_>`__
 
 
 python.event
@@ -6701,13 +7281,22 @@ Description
 filters-environment
 -------------------
 Type
-    ``bool``
+    * ``bool``
+    * ``string``
 Default
     ``true``
 Description
-    Evaluate filter expressions raising an exception as ``false``
-    instead of aborting the current extractor run
-    by wrapping them in a `try`/`except` block.
+    Evaluate filter expressions in a special environment
+    preventing them from raising fatal exceptions.
+
+    ``true`` or ``"tryexcept"``:
+        Wrap expressions in a `try`/`except` block;
+        Evaluate expressions raising an exception as ``false``
+    ``false`` or ``"raw"``:
+        Do not wrap expressions in a special environment
+    ``"defaultdict"``:
+        Prevent exceptions when accessing undefined variables
+        by using a `defaultdict <https://docs.python.org/3/library/collections.html#collections.defaultdict>`__
 
 
 format-separator

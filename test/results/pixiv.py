@@ -71,6 +71,13 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://www.pixiv.net/en/users/56514424/artworks",
+    "#comment" : "limit_sanity_level_360.png in artworks results (#5435, #6339)",
+    "#class"   : pixiv.PixivArtworksExtractor,
+    "#count"   : ">= 39",
+},
+
+{
     "#url"     : "https://www.pixiv.net/en/users/173530/manga",
     "#category": ("", "pixiv", "artworks"),
     "#class"   : pixiv.PixivArtworksExtractor,
@@ -193,11 +200,12 @@ __tests__ = (
     "#url"     : "https://www.pixiv.net/en/artworks/102932581",
     "#comment" : "limit_sanity_level_360.png (#4327, #5180)",
     "#class"   : pixiv.PixivWorkExtractor,
-    "#options" : {"sanity": True},
+    "#options" : {"sanity": True, "comments": True},
     "#urls"    : "https://i.pximg.net/img-original/img/2022/11/20/00/00/49/102932581_p0.jpg",
 
     "caption"       : "Meet a deer .",
     "comment_access_control": 0,
+    "comments"      : (),
     "create_date"   : "2022-11-19T15:00:00+00:00",
     "date"          : "dt:2022-11-19 15:00:00",
     "date_url"      : "dt:2022-11-19 15:00:49",
@@ -267,6 +275,31 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://www.pixiv.net/en/artworks/104582860",
+    "#comment" : "deleted limit_sanity_level_360.png work (#6339)",
+    "#class"   : pixiv.PixivWorkExtractor,
+    "#count"   : 0,
+},
+
+{
+    "#url"     : "https://www.pixiv.net/en/artworks/103983466",
+    "#comment" : "empty 'caption' in App API response (#4327, #5191)",
+    "#class"   : pixiv.PixivWorkExtractor,
+    "#options" : {"captions": True},
+
+    "caption": r"re:Either she doesn't know how to pose or she can't move with that much clothing on her, in any case she's very well dressed for a holiday trip around town. Lots of stuff to see and a perfect day to grab some sweet pastries at the bakery.<br />...",
+},
+
+{
+    "#url"     : "https://www.pixiv.net/artworks/56360615",
+    "#comment" : "fallback; 'original' version results in HTTP 500 error (#6762)",
+    "#class"   : pixiv.PixivWorkExtractor,
+    "#options" : {"retries": 0},
+    "#range"   : "4",
+    "#sha1_content": "aa119c27fec0a36bbd06e7491987acf5f1be6293",
+},
+
+{
     "#url"     : "https://www.pixiv.net/en/artworks/966412",
     "#category": ("", "pixiv", "work"),
     "#class"   : pixiv.PixivWorkExtractor,
@@ -309,17 +342,38 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://www.pixiv.net/en/artworks/unlisted/eE3fTYaROT9IsZmep386",
+    "#class"   : pixiv.PixivUnlistedExtractor,
+    "#urls"    : "https://i.pximg.net/img-original/img/2020/10/15/00/46/12/85017704-149014193e4d3e23a6b8bd5e38b51ed4_p0.png",
+
+    "id"         : 85017704,
+    "id_unlisted": "eE3fTYaROT9IsZmep386",
+},
+
+{
     "#url"     : "https://www.pixiv.net/en/users/173530/bookmarks/artworks",
     "#category": ("", "pixiv", "favorite"),
     "#class"   : pixiv.PixivFavoriteExtractor,
-    "#sha1_url": "85a3104eaaaf003c7b3947117ca2f1f0b1cfc949",
+    "#urls"    : [
+        "https://i.pximg.net/img-original/img/2008/10/31/17/54/01/2005108_p0.jpg",
+        "https://i.pximg.net/img-original/img/2008/09/27/12/22/40/1719386_p0.jpg",
+        "https://i.pximg.net/img-original/img/2008/04/15/01/43/46/669358_p0.jpg",
+        "https://i.pximg.net/img-original/img/2008/06/19/21/52/15/1005851_p0.jpg",
+        "https://i.pximg.net/img-original/img/2008/06/17/22/16/54/994965_p0.jpg",
+    ],
 },
 
 {
     "#url"     : "https://www.pixiv.net/bookmark.php?id=173530",
     "#category": ("", "pixiv", "favorite"),
     "#class"   : pixiv.PixivFavoriteExtractor,
-    "#sha1_url": "85a3104eaaaf003c7b3947117ca2f1f0b1cfc949",
+    "#urls"    : [
+        "https://i.pximg.net/img-original/img/2008/10/31/17/54/01/2005108_p0.jpg",
+        "https://i.pximg.net/img-original/img/2008/09/27/12/22/40/1719386_p0.jpg",
+        "https://i.pximg.net/img-original/img/2008/04/15/01/43/46/669358_p0.jpg",
+        "https://i.pximg.net/img-original/img/2008/06/19/21/52/15/1005851_p0.jpg",
+        "https://i.pximg.net/img-original/img/2008/06/17/22/16/54/994965_p0.jpg",
+    ],
 },
 
 {
@@ -401,6 +455,13 @@ __tests__ = (
     "#url"     : "https://www.pixiv.net/ranking.php",
     "#category": ("", "pixiv", "ranking"),
     "#class"   : pixiv.PixivRankingExtractor,
+    "#options" : {"max-posts": 10},
+
+    "ranking": {
+        "date": r"re:\d\d\d\d-\d\d-\d\d",
+        "mode": "day",
+        "rank": range(1, 10),
+    },
 },
 
 {

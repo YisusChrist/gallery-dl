@@ -59,6 +59,7 @@ class Job():
                 for category in parents:
                     cat = "{}>{}".format(category, extr.category)
                     cfgpath.append((cat, extr.subcategory))
+                    cfgpath.append((category + ">*", extr.subcategory))
                 cfgpath.append((extr.category, extr.subcategory))
                 self.parents = parents
             else:
@@ -347,6 +348,9 @@ class DownloadJob(Job):
                 self.status |= 4
                 self.log.error("Failed to download %s",
                                pathfmt.filename or url)
+                if "error" in hooks:
+                    for callback in hooks["error"]:
+                        callback(pathfmt)
                 return
 
         if not pathfmt.temppath:
@@ -433,7 +437,8 @@ class DownloadJob(Job):
 
                     if status:
                         self.status |= status
-                        if "_fallback" in kwdict and self.fallback:
+                        if (status & 95 and   # not FormatError or OSError
+                                "_fallback" in kwdict and self.fallback):
                             fallback = kwdict["_fallback"] = \
                                 iter(kwdict["_fallback"])
                             try:
@@ -546,20 +551,25 @@ class DownloadJob(Job):
 
         archive_path = cfg("archive")
         if archive_path:
-            archive_path = util.expand_path(archive_path)
-            archive_format = (cfg("archive-prefix", extr.category) +
-                              cfg("archive-format", extr.archive_fmt))
-            archive_pragma = (cfg("archive-pragma"))
+            archive_table = cfg("archive-table")
+            archive_prefix = cfg("archive-prefix")
+            if archive_prefix is None:
+                archive_prefix = extr.category if archive_table is None else ""
+
+            archive_format = cfg("archive-format")
+            if archive_format is None:
+                archive_format = extr.archive_fmt
+
             try:
-                if "{" in archive_path:
-                    archive_path = formatter.parse(
-                        archive_path).format_map(kwdict)
-                if cfg("archive-mode") == "memory":
-                    archive_cls = archive.DownloadArchiveMemory
-                else:
-                    archive_cls = archive.DownloadArchive
-                self.archive = archive_cls(
-                    archive_path, archive_format, archive_pragma)
+                self.archive = archive.connect(
+                    archive_path,
+                    archive_prefix,
+                    archive_format,
+                    archive_table,
+                    cfg("archive-mode"),
+                    cfg("archive-pragma"),
+                    kwdict,
+                )
             except Exception as exc:
                 extr.log.warning(
                     "Failed to open download archive at '%s' (%s: %s)",
@@ -594,7 +604,7 @@ class DownloadJob(Job):
 
                 skip_filter = cfg("skip-filter")
                 if skip_filter:
-                    self._skipftr = util.compile_expression(skip_filter)
+                    self._skipftr = util.compile_filter(skip_filter)
                 else:
                     self._skipftr = None
         else:
@@ -618,6 +628,14 @@ class DownloadJob(Job):
             for pp_dict in postprocessors:
                 if isinstance(pp_dict, str):
                     pp_dict = pp_conf.get(pp_dict) or {"name": pp_dict}
+                elif "type" in pp_dict:
+                    pp_type = pp_dict["type"]
+                    if pp_type in pp_conf:
+                        pp = pp_conf[pp_type].copy()
+                        pp.update(pp_dict)
+                        pp_dict = pp
+                    if "name" not in pp_dict:
+                        pp_dict["name"] = pp_type
                 if pp_opts:
                     pp_dict = pp_dict.copy()
                     pp_dict.update(pp_opts)
@@ -656,7 +674,7 @@ class DownloadJob(Job):
         expr = options.get("filter") if options else None
 
         if expr:
-            condition = util.compile_expression(expr)
+            condition = util.compile_filter(expr)
             for hook, callback in hooks.items():
                 self.hooks[hook].append(functools.partial(
                     self._call_hook, callback, condition))

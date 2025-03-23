@@ -102,8 +102,8 @@ class WebtoonsEpisodeExtractor(WebtoonsBase, GalleryExtractor):
         else:
             episode = ""
 
-        if extr('<div class="author_area"', '\n'):
-            username = extr('/creator/', '"')
+        if extr('<span class="author"', '\n'):
+            username = extr('/u/', '"')
             author_name = extr('<span>', '</span>')
         else:
             username = author_name = ""
@@ -155,7 +155,10 @@ class WebtoonsComicExtractor(WebtoonsBase, Extractor):
 
     def items(self):
         page = None
-        data = {"_extractor": WebtoonsEpisodeExtractor}
+        data = {
+            "_extractor": WebtoonsEpisodeExtractor,
+            "title_no"  : text.parse_int(self.title_no),
+        }
 
         while True:
             path = "/{}/list?title_no={}&page={}".format(
@@ -173,6 +176,8 @@ class WebtoonsComicExtractor(WebtoonsBase, Extractor):
             data["page"] = self.page_no
 
             for url in self.get_episode_urls(page):
+                params = text.parse_query(url.rpartition("?")[2])
+                data["episode_no"] = text.parse_int(params.get("episode_no"))
                 yield Message.Queue, url, data
 
             self.page_no += 1

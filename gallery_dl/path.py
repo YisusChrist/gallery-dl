@@ -38,7 +38,7 @@ class PathFormat():
                 filename_fmt = extractor.filename_fmt
             elif isinstance(filename_fmt, dict):
                 self.filename_conditions = [
-                    (util.compile_expression(expr),
+                    (util.compile_filter(expr),
                      formatter.parse(fmt, kwdefault).format_map)
                     for expr, fmt in filename_fmt.items() if expr
                 ]
@@ -57,7 +57,7 @@ class PathFormat():
                 directory_fmt = extractor.directory_fmt
             elif isinstance(directory_fmt, dict):
                 self.directory_conditions = [
-                    (util.compile_expression(expr), [
+                    (util.compile_filter(expr), [
                         formatter.parse(fmt, kwdefault).format_map
                         for fmt in fmts
                     ])
@@ -342,15 +342,22 @@ class PathFormat():
                 try:
                     os.replace(self.temppath, self.realpath)
                 except FileNotFoundError:
-                    # delayed directory creation
-                    os.makedirs(self.realdirectory)
+                    try:
+                        # delayed directory creation
+                        os.makedirs(self.realdirectory)
+                    except FileExistsError:
+                        # file at self.temppath does not exist
+                        return False
                     continue
                 except OSError:
                     # move across different filesystems
                     try:
                         shutil.copyfile(self.temppath, self.realpath)
                     except FileNotFoundError:
-                        os.makedirs(self.realdirectory)
+                        try:
+                            os.makedirs(self.realdirectory)
+                        except FileExistsError:
+                            return False
                         shutil.copyfile(self.temppath, self.realpath)
                     os.unlink(self.temppath)
                 break

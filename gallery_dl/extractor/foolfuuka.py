@@ -37,7 +37,7 @@ class FoolfuukaExtractor(BaseExtractor):
 
             if not url and "remote_media_link" in media:
                 url = self.remote(media)
-            if url.startswith("/"):
+            if url and url[0] == "/":
                 url = self.root + url
 
             post["filename"], _, post["extension"] = \
@@ -81,8 +81,8 @@ BASE_PATTERN = FoolfuukaExtractor.update({
         "pattern": r"(?:www\.)?archiveofsins\.com",
     },
     "b4k": {
-        "root": "https://arch.b4k.co",
-        "pattern": r"arch\.b4k\.co",
+        "root": "https://arch.b4k.dev",
+        "pattern": r"arch\.b4k\.(?:dev|co)",
     },
     "desuarchive": {
         "root": "https://desuarchive.org",

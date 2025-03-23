@@ -33,6 +33,7 @@ class WeiboExtractor(Extractor):
         self.livephoto = self.config("livephoto", True)
         self.retweets = self.config("retweets", False)
         self.videos = self.config("videos", True)
+        self.movies = self.config("movies", False)
         self.gifs = self.config("gifs", True)
         self.gifs_video = (self.gifs == "video")
 
@@ -126,11 +127,7 @@ class WeiboExtractor(Extractor):
 
                 elif pic_type == "livephoto" and self.livephoto:
                     append(pic["largest"].copy())
-
-                    file = {"url": pic["video"]}
-                    file["filename"], _, file["extension"] = \
-                        pic["video"].rpartition("%2F")[2].rpartition(".")
-                    append(file)
+                    append({"url": pic["video"]})
 
                 else:
                     append(pic["largest"].copy())
@@ -138,7 +135,10 @@ class WeiboExtractor(Extractor):
         if "page_info" in status:
             info = status["page_info"]
             if "media_info" in info and self.videos:
-                append(self._extract_video(info["media_info"]))
+                if info.get("type") != "5" or self.movies:
+                    append(self._extract_video(info["media_info"]))
+                else:
+                    self.log.debug("%s: Ignoring 'movie' video", status["id"])
 
     def _extract_video(self, info):
         try:
@@ -250,6 +250,11 @@ class WeiboUserExtractor(WeiboExtractor):
     subcategory = "user"
     pattern = USER_PATTERN + r"(?:$|#)"
     example = "https://weibo.com/USER"
+
+    # do NOT override 'initialize()'
+    # it is needed for 'self._user_id()'
+    # def initialize(self):
+    #     pass
 
     def items(self):
         base = "{}/u/{}?tabtype=".format(self.root, self._user_id())

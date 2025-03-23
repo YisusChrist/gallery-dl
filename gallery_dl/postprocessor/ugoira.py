@@ -9,7 +9,7 @@
 """Convert Pixiv Ugoira to WebM"""
 
 from .common import PostProcessor
-from .. import util
+from .. import util, output
 import subprocess
 import tempfile
 import zipfile
@@ -105,11 +105,12 @@ class UgoiraPP(PostProcessor):
         }, options)
 
     def prepare(self, pathfmt):
-        if "frames" not in pathfmt.kwdict:
+        self._convert_zip = self._convert_files = False
+        if "_ugoira_frame_data" not in pathfmt.kwdict:
             self._frames = None
             return
 
-        self._frames = pathfmt.kwdict["frames"]
+        self._frames = pathfmt.kwdict["_ugoira_frame_data"]
         if pathfmt.extension == "zip":
             self._convert_zip = True
             if self.delete:
@@ -136,7 +137,6 @@ class UgoiraPP(PostProcessor):
     def convert_from_zip(self, pathfmt):
         if not self._convert_zip:
             return
-        self._convert_zip = False
         self._zip_source = True
 
         with self._tempdir() as tempdir:
@@ -147,6 +147,13 @@ class UgoiraPP(PostProcessor):
                 except FileNotFoundError:
                     pathfmt.realpath = pathfmt.temppath
                     return
+                except Exception as exc:
+                    pathfmt.realpath = pathfmt.temppath
+                    self.log.error(
+                        "%s: Unable to extract frames from %s (%s: %s)",
+                        pathfmt.kwdict.get("id"), pathfmt.filename,
+                        exc.__class__.__name__, exc)
+                    return self.log.debug("", exc_info=exc)
 
             if self.convert(pathfmt, tempdir):
                 if self.delete:
@@ -159,7 +166,6 @@ class UgoiraPP(PostProcessor):
     def convert_from_files(self, pathfmt):
         if not self._convert_files:
             return
-        self._convert_files = False
         self._zip_source = False
 
         with tempfile.TemporaryDirectory() as tempdir:
@@ -220,13 +226,13 @@ class UgoiraPP(PostProcessor):
             if self._finalize:
                 self._finalize(pathfmt, tempdir)
         except OSError as exc:
-            print()
+            output.stderr_write("\n")
             self.log.error("Unable to invoke FFmpeg (%s: %s)",
                            exc.__class__.__name__, exc)
             self.log.debug("", exc_info=exc)
             pathfmt.realpath = pathfmt.temppath
         except Exception as exc:
-            print()
+            output.stderr_write("\n")
             self.log.error("%s: %s", exc.__class__.__name__, exc)
             self.log.debug("", exc_info=exc)
             pathfmt.realpath = pathfmt.temppath
@@ -290,7 +296,7 @@ class UgoiraPP(PostProcessor):
         out = None if self.output else subprocess.DEVNULL
         retcode = util.Popen(args, stdout=out, stderr=out).wait()
         if retcode:
-            print()
+            output.stderr_write("\n")
             self.log.error("Non-zero exit status when running %s (%s)",
                            args, retcode)
             raise ValueError()

@@ -9,7 +9,7 @@
 """Extractors for https://www.imagefap.com/"""
 
 from .common import Extractor, Message
-from .. import text, util, exception
+from .. import text, exception
 
 BASE_PATTERN = r"(?:https?://)?(?:www\.|beta\.)?imagefap\.com"
 
@@ -19,7 +19,8 @@ class ImagefapExtractor(Extractor):
     category = "imagefap"
     root = "https://www.imagefap.com"
     directory_fmt = ("{category}", "{gallery_id} {title}")
-    filename_fmt = "{category}_{gallery_id}_{num:04}_{filename}.{extension}"
+    filename_fmt = ("{category}_{gallery_id}_{num:?/_/>04}"
+                    "{filename}.{extension}")
     archive_fmt = "{gallery_id}_{image_id}"
     request_interval = (2.0, 4.0)
 
@@ -128,13 +129,11 @@ class ImagefapImageExtractor(ImagefapExtractor):
 
         url, pos = text.extract(
             page, 'original="', '"')
-        info, pos = text.extract(
-            page, '<script type="application/ld+json">', '</script>', pos)
         image_id, pos = text.extract(
             page, 'id="imageid_input" value="', '"', pos)
         gallery_id, pos = text.extract(
             page, 'id="galleryid_input" value="', '"', pos)
-        info = util.json_loads(info)
+        info = self._extract_jsonld(page)
 
         return url, text.nameext_from_url(url, {
             "title": text.unescape(info["name"]),
