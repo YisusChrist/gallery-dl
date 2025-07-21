@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2022-2023 Mike Fährmann
+# Copyright 2022-2025 Mike Fährmann
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as
@@ -12,7 +12,6 @@ from .booru import BooruExtractor
 from ..cache import cache
 from .. import text, util, exception
 import collections
-import re
 
 BASE_PATTERN = r"(?:https?://)?(?:www\.)?zerochan\.net"
 
@@ -63,7 +62,7 @@ class ZerochanExtractor(BooruExtractor):
         return response.cookies
 
     def _parse_entry_html(self, entry_id):
-        url = "{}/{}".format(self.root, entry_id)
+        url = f"{self.root}/{entry_id}"
         page = self.request(url).text
 
         try:
@@ -74,7 +73,6 @@ class ZerochanExtractor(BooruExtractor):
         extr = text.extract_from(page)
         data = {
             "id"      : text.parse_int(entry_id),
-            "author"  : jsonld["author"]["name"],
             "file_url": jsonld["contentUrl"],
             "date"    : text.parse_datetime(jsonld["datePublished"]),
             "width"   : text.parse_int(jsonld["width"][:-3]),
@@ -88,6 +86,11 @@ class ZerochanExtractor(BooruExtractor):
                 'id="source-url"', '</p>').rpartition("</s>")[2])),
         }
 
+        try:
+            data["author"] = jsonld["author"]["name"]
+        except Exception:
+            data["author"] = ""
+
         html = data["tags"]
         tags = data["tags"] = []
         for tag in html.split("<li class=")[1:]:
@@ -98,7 +101,7 @@ class ZerochanExtractor(BooruExtractor):
         return data
 
     def _parse_entry_api(self, entry_id):
-        url = "{}/{}?json".format(self.root, entry_id)
+        url = f"{self.root}/{entry_id}?json"
         txt = self.request(url).text
         try:
             item = util.json_loads(txt)
@@ -123,7 +126,7 @@ class ZerochanExtractor(BooruExtractor):
         return data
 
     def _parse_json(self, txt):
-        txt = re.sub(r"[\x00-\x1f\x7f]", "", txt)
+        txt = util.re(r"[\x00-\x1f\x7f]").sub("", txt)
         main, _, tags = txt.partition('tags": [')
 
         item = {}
@@ -235,7 +238,7 @@ class ZerochanTagExtractor(ZerochanExtractor):
                 self.log.warning("HTTP redirect to %s", url)
                 if self.config("redirects"):
                     continue
-                raise exception.StopExtraction()
+                raise exception.AbortExtraction()
 
             data = response.json()
             try:
@@ -274,7 +277,7 @@ class ZerochanImageExtractor(ZerochanExtractor):
 
     def __init__(self, match):
         ZerochanExtractor.__init__(self, match)
-        self.image_id = match.group(1)
+        self.image_id = match[1]
 
     def posts(self):
         post = self._parse_entry_html(self.image_id)
